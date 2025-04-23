@@ -33,7 +33,7 @@ app.use(cookieParser());
 // use routes
 app.use("/api/v1", productsRouter);
 app.use( "/api/v1", userRouter)
-app.use("/api/v1", cartRouter);
+app.use("/api/v1/cart", cartRouter);
 
 
 //listen for incoming request
