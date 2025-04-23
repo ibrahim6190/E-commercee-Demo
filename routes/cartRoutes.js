@@ -7,13 +7,13 @@ import {
     clearCart,
     checkout
 } from "../controllers/cartControllers.js";
-import isAuthenticated from "../middlewares/auth.js";
+// import isAuthenticated from "../middlewares/auth.js";
 
 // Create cart router
 const cartRouter = Router();
 
 // All cart routes require authentication
-cartRouter.use(isAuthenticated);
+// cartRouter.use(isAuthenticated);
 
 // Define routes
 cartRouter.get('/cart', getCart);
