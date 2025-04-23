@@ -33,11 +33,11 @@ app.use(cookieParser());
 // use routes
 app.use("/api/v1", productsRouter);
 app.use( "/api/v1", userRouter)
-app.use("/api/v1", cartRouter);
+app.use("/api/v1/cart", cartRouter);
 
 
 //listen for incoming request
 const port= process.env.PORT || 3080;
-app.listen(3080, () => {
+app.listen( () => {
     console.log (`server is listening on port ${port}`);
 });
