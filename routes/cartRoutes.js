@@ -1,27 +1,30 @@
-import { Router } from "express";
-import {
-    getCart,
-    addToCart,
-    updateCartItem,
-    removeCartItem,
-    clearCart,
-    checkout
-} from "../controllers/cartControllers.js";
-// import isAuthenticated from "../middlewares/auth.js";
+import express from "express";
+import { 
+    getCart, 
+    addToCart, 
+    updateCartItem, 
+    removeCartItem, 
+    clearCart, 
+    checkout,
+    transferGuestCart
+} from "../controllers/cartController.js";
+import { isAuthenticated } from "../middlewares/auth.js";
+import cookieParser from "cookie-parser";
 
-// Create cart router
-const cartRouter = Router();
+const router = express.Router();
 
-// All cart routes require authentication
-// cartRouter.use(isAuthenticated);
+// Add cookie parser middleware for all cart routes
+router.use(cookieParser());
 
-// Define routes
-cartRouter.get('/cart', getCart);
-cartRouter.post('/cart/items', addToCart);
-cartRouter.patch('/cart/items/:itemId', updateCartItem);
-cartRouter.delete('/cart/items/:itemId', removeCartItem);
-cartRouter.delete('/cart', clearCart);
-cartRouter.post('/cart/checkout', checkout);
+// Routes that work for both guests and authenticated users
+router.get("/", getCart);
+router.post("/add", addToCart);
+router.put("/item/:itemId", updateCartItem);
+router.delete("/item/:itemId", removeCartItem);
+router.delete("/", clearCart);
 
-// Export the router
-export default cartRouter; 
+// Routes that require authentication
+router.post("/checkout", isAuthenticated, checkout);
+router.post("/transfer", isAuthenticated, transferGuestCart);
+
+export default router;
