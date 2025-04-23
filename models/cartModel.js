@@ -1,5 +1,5 @@
 import { Schema, model, Types } from "mongoose";
-import normalize from "normalize-mongoose";
+
 
 const cartItemSchema = new Schema({
     productId: {
