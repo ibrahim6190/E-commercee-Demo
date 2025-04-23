@@ -1,5 +1,5 @@
 import { Router } from "express";
-import { addProducts, countProducts, deleteProducts, getProducts, replaceProduct, updateProducts } from "../controllers/products.js";
+import { addProducts, countProducts, getProductById, deleteProducts, getProducts, replaceProduct, updateProducts } from "../controllers/products.js";
 import { productPicturesUpload } from "../middlewares/upload.js";
 import { isAuthenticated, isAuthorized } from "../middlewares/auth.js";
 
@@ -16,7 +16,7 @@ productsRouter.post(
 );
 
 productsRouter.get('/products', getProducts);
-
+productsRouter.get('/product/:id', getProductById)
 productsRouter.get('/products/count', countProducts);
 
 // Fix the syntax error - removed the comma and fixed the structure
