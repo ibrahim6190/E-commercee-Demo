@@ -91,6 +91,17 @@ export const countProducts = async (req, res, next) => {
     }
 }
 
+export const getProductById = async(req, res, next) => {
+    try {
+      // Fetch product by id from database
+      const result = await productModel.findById(req.params.id);
+      // Return response
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+};
+
 export const updateProducts = async (req, res, next) => {
     try {
         // Validate product information
