@@ -3,17 +3,17 @@ import normalize from "normalize-mongoose";
 
 const productSchema = new Schema(
   {
-    name: { type: String, required: true, unique: true, index: true },
+    name: { type: String, required: true, unique: true, index: 1 },
     price: { type: Number, required: true },
     description: { type: String, required: true },
     quantity: { type: Number, required: true },
     category: { 
       type: String, 
       enum: ["Cereals", "Fresh milk", "Tuber foods", "Tea leaves", "Fruits", "Spices", "Vegetables"], 
-      required: true, index: true
+      required: true, index: 1
     },
     pictures: [{ type: String, required: true }],
-    userId: { type: Types.ObjectId, required: true,index: true ,ref: "User" },
+    userId: { type: Types.ObjectId, required: true, index: 1 ,ref: "User" },
   },
   {
     timestamps: true,
