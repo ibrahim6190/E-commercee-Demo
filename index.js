@@ -3,8 +3,10 @@ import 'dotenv/config';
 import productsRouter from './routes/products.js';
 import mongoose from 'mongoose';
 import cors from "cors";
+import cookieParser from 'cookie-parser';
 import userRouter from './routes/user.js';
 import cartRouter from './routes/cartRoutes.js';
+
 
 
 
@@ -25,6 +27,7 @@ const app = express();
 //use global middlewares
 app.use(express.json());
 app.use(cors());
+app.use(cookieParser());
 
 
 // use routes

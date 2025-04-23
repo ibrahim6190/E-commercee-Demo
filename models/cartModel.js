@@ -3,8 +3,8 @@ import normalize from "normalize-mongoose";
 
 const cartItemSchema = new Schema({
     productId: {
-        type: Types.ObjectId,
-        ref: 'Product',
+        type: Types.ObjectId, // Use Types from the imported Schema
+        ref: "Product",
         required: true
     },
     quantity: {
@@ -21,48 +21,40 @@ const cartItemSchema = new Schema({
         type: String,
         required: true
     },
-    // Store picture URL from product for quick access
     picture: {
-        type: String
+        type: String,
+        default: null
     }
 });
 
 const cartSchema = new Schema({
     userId: {
-        type: Types.ObjectId,
-        ref: 'User',
-        required: true,
-        unique: true
+        type: Types.ObjectId, // Use Types here as well
+        ref: "User",
+        required: false // Not required for guest carts
     },
     items: [cartItemSchema],
-    // Track totals at cart level for quick access
-    totalItems: {
-        type: Number,
-        default: 0
-    },
-    totalAmount: {
-        type: Number,
-        default: 0
-    },
-    // Payment information to be used during checkout
-    paymentMethodId: {
-        type: Types.ObjectId,
-        ref: 'User.paymentMethods'
+    createdAt: {
+        type: Date,
+        default: Date.now,
+        expires: '7d' // Guest carts expire after 7 days if not used
     }
-}, {
-    timestamps: true
+}, { 
+    timestamps: true,
+    toJSON: { virtuals: true },
+    toObject: { virtuals: true }
 });
 
-// Middleware to calculate and update cart totals before saving
-cartSchema.pre('save', function (next) {
-    // Calculate total items
-    this.totalItems = this.items.reduce((total, item) => total + item.quantity, 0);
-
-    // Calculate total amount
-    this.totalAmount = this.items.reduce((total, item) => total + (item.price * item.quantity), 0);
-
-    next();
+// Virtual properties to calculate cart totals
+cartSchema.virtual('totalItems').get(function() {
+    return this.items.reduce((total, item) => total + item.quantity, 0);
 });
 
-cartSchema.plugin(normalize);
-export const CartModel = model('Cart', cartSchema); 
+cartSchema.virtual('totalAmount').get(function() {
+    return parseFloat(this.items.reduce(
+        (total, item) => total + (item.price * item.quantity), 
+        0
+    ).toFixed(2));
+});
+
+export const CartModel = model("Cart", cartSchema); // Use model directly

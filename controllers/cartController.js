@@ -4,11 +4,26 @@ import { UserModel } from "../models/user.js";
 import { addToCartValidator, updateCartItemValidator, checkoutCartValidator } from "../validators/cartValidator.js";
 import { transporter } from "../utils/mail.js";
 
-// Get the current user's cart
+// Get the cart for current user or guest
 export const getCart = async (req, res) => {
     try {
-        // Find cart for authenticated user
-        const cart = await CartModel.findOne({ userId: req.auth.id });
+        // Check if this is a guest (no auth) or authenticated user
+        const isGuest = !req.auth;
+        const cartId = isGuest ? req.cookies.guestCartId : req.auth.id;
+        
+        if (!cartId) {
+            // No cart ID found, return empty cart
+            return res.status(200).json({
+                items: [],
+                totalItems: 0,
+                totalAmount: 0
+            });
+        }
+
+        // Find cart by ID (for guest) or user ID (for authenticated user)
+        const cart = await CartModel.findOne(
+            isGuest ? { _id: cartId } : { userId: cartId }
+        );
 
         // If no cart exists yet, return an empty cart
         if (!cart) {
@@ -26,7 +41,7 @@ export const getCart = async (req, res) => {
     }
 };
 
-// Add an item to the cart
+// Add an item to the cart (works for both guests and authenticated users)
 export const addToCart = async (req, res) => {
     try {
         // Validate request
@@ -49,15 +64,37 @@ export const addToCart = async (req, res) => {
             });
         }
 
-        // Find or create cart for this user
-        let cart = await CartModel.findOne({ userId: req.auth.id });
-
-        if (!cart) {
-            // Create a new cart if one doesn't exist
-            cart = new CartModel({
-                userId: req.auth.id,
-                items: []
-            });
+        // Check if this is a guest or authenticated user
+        const isGuest = !req.auth;
+        const cartId = isGuest ? req.cookies.guestCartId : req.auth.id;
+        
+        // Find or create cart for this user/guest
+        let cart;
+        
+        if (isGuest) {
+            if (cartId) {
+                // Try to find existing guest cart by ID
+                cart = await CartModel.findById(cartId);
+            }
+            
+            if (!cart) {
+                // Create a new guest cart
+                cart = new CartModel({
+                    // No userId for guest cart
+                    items: []
+                });
+            }
+        } else {
+            // Find or create cart for this authenticated user
+            cart = await CartModel.findOne({ userId: req.auth.id });
+            
+            if (!cart) {
+                // Create a new cart for authenticated user
+                cart = new CartModel({
+                    userId: req.auth.id,
+                    items: []
+                });
+            }
         }
 
         // Check if product already exists in cart
@@ -82,6 +119,14 @@ export const addToCart = async (req, res) => {
         // Save the cart
         await cart.save();
 
+        // If this is a guest and they don't have a cart cookie yet, set it
+        if (isGuest && !req.cookies.guestCartId) {
+            res.cookie('guestCartId', cart._id.toString(), { 
+                httpOnly: true, 
+                maxAge: 7 * 24 * 60 * 60 * 1000 // 7 days
+            });
+        }
+
         return res.status(200).json(cart);
     } catch (error) {
         console.error("Add to cart error:", error);
@@ -89,7 +134,7 @@ export const addToCart = async (req, res) => {
     }
 };
 
-// Update cart item quantity
+// Update cart item quantity (works for both guests and authenticated users)
 export const updateCartItem = async (req, res) => {
     try {
         const { itemId } = req.params;
@@ -100,8 +145,19 @@ export const updateCartItem = async (req, res) => {
             return res.status(400).json({ error: error.details[0].message });
         }
 
-        // Find the cart
-        const cart = await CartModel.findOne({ userId: req.auth.id });
+        // Check if this is a guest or authenticated user
+        const isGuest = !req.auth;
+        const cartId = isGuest ? req.cookies.guestCartId : req.auth.id;
+        
+        if (!cartId) {
+            return res.status(404).json({ error: "Cart not found" });
+        }
+
+        // Find cart by ID (for guest) or user ID (for authenticated user)
+        const cart = await CartModel.findOne(
+            isGuest ? { _id: cartId } : { userId: cartId }
+        );
+        
         if (!cart) {
             return res.status(404).json({ error: "Cart not found" });
         }
@@ -142,13 +198,24 @@ export const updateCartItem = async (req, res) => {
     }
 };
 
-// Remove an item from the cart
+// Remove an item from the cart (works for both guests and authenticated users)
 export const removeCartItem = async (req, res) => {
     try {
         const { itemId } = req.params;
 
-        // Find the cart
-        const cart = await CartModel.findOne({ userId: req.auth.id });
+        // Check if this is a guest or authenticated user
+        const isGuest = !req.auth;
+        const cartId = isGuest ? req.cookies.guestCartId : req.auth.id;
+        
+        if (!cartId) {
+            return res.status(404).json({ error: "Cart not found" });
+        }
+
+        // Find cart by ID (for guest) or user ID (for authenticated user)
+        const cart = await CartModel.findOne(
+            isGuest ? { _id: cartId } : { userId: cartId }
+        );
+        
         if (!cart) {
             return res.status(404).json({ error: "Cart not found" });
         }
@@ -175,11 +242,22 @@ export const removeCartItem = async (req, res) => {
     }
 };
 
-// Clear the cart
+// Clear the cart (works for both guests and authenticated users)
 export const clearCart = async (req, res) => {
     try {
-        // Find the cart
-        const cart = await CartModel.findOne({ userId: req.auth.id });
+        // Check if this is a guest or authenticated user
+        const isGuest = !req.auth;
+        const cartId = isGuest ? req.cookies.guestCartId : req.auth.id;
+        
+        if (!cartId) {
+            return res.status(404).json({ error: "Cart not found" });
+        }
+
+        // Find cart by ID (for guest) or user ID (for authenticated user)
+        const cart = await CartModel.findOne(
+            isGuest ? { _id: cartId } : { userId: cartId }
+        );
+        
         if (!cart) {
             return res.status(404).json({ error: "Cart not found" });
         }
@@ -200,9 +278,17 @@ export const clearCart = async (req, res) => {
     }
 };
 
-// Process checkout
+// Process checkout (requires authentication)
 export const checkout = async (req, res) => {
     try {
+        // Check if user is authenticated
+        if (!req.auth) {
+            return res.status(401).json({ 
+                error: "You must be logged in to complete checkout",
+                requiresAuth: true
+            });
+        }
+
         // Validate checkout data
         const { error, value } = checkoutCartValidator.validate(req.body);
         if (error) {
@@ -280,7 +366,7 @@ export const checkout = async (req, res) => {
                 // Don't send sensitive details to client
                 isDefault: paymentMethod.isDefault,
             },
-            shippingAddress: value.shippingAddress,
+            deliveryAddress: value.deliveryAddress,
             status: 'processing',
             orderNumber: generateOrderNumber(),
             orderDate: new Date()
@@ -301,7 +387,7 @@ export const checkout = async (req, res) => {
             `;
 
             await transporter.sendMail({
-                from: 'ibrah.webdev@gmail.com',
+                from: process.env.USER_EMAIL,
                 to: user.email,
                 subject: 'Order Confirmation',
                 html: emailTemplate,
@@ -318,6 +404,71 @@ export const checkout = async (req, res) => {
     } catch (error) {
         console.error("Checkout error:", error);
         return res.status(500).json({ error: "Failed to process checkout" });
+    }
+};
+
+// Transfer guest cart to user cart after login
+export const transferGuestCart = async (req, res) => {
+    try {
+        // Check if there's a guest cart to transfer
+        const guestCartId = req.cookies.guestCartId;
+        if (!guestCartId) {
+            return res.status(200).json({ message: "No guest cart to transfer" });
+        }
+
+        // Find guest cart
+        const guestCart = await CartModel.findById(guestCartId);
+        if (!guestCart || guestCart.items.length === 0) {
+            // Clear guest cart cookie if no cart exists or it's empty
+            res.clearCookie('guestCartId');
+            return res.status(200).json({ message: "No guest cart items to transfer" });
+        }
+
+        // Find or create user cart
+        let userCart = await CartModel.findOne({ userId: req.auth.id });
+        if (!userCart) {
+            userCart = new CartModel({
+                userId: req.auth.id,
+                items: []
+            });
+        }
+
+        // Transfer items from guest cart to user cart
+        for (const guestItem of guestCart.items) {
+            // Check if the product exists in user cart
+            const existingItemIndex = userCart.items.findIndex(
+                item => item.productId.toString() === guestItem.productId.toString()
+            );
+
+            if (existingItemIndex !== -1) {
+                // If product exists, update quantity
+                userCart.items[existingItemIndex].quantity += guestItem.quantity;
+            } else {
+                // If product doesn't exist, add it
+                userCart.items.push({
+                    productId: guestItem.productId,
+                    quantity: guestItem.quantity,
+                    price: guestItem.price,
+                    name: guestItem.name,
+                    picture: guestItem.picture
+                });
+            }
+        }
+
+        // Save user cart
+        await userCart.save();
+
+        // Delete guest cart and clear cookie
+        await CartModel.findByIdAndDelete(guestCartId);
+        res.clearCookie('guestCartId');
+
+        return res.status(200).json({
+            message: "Guest cart transferred successfully",
+            cart: userCart
+        });
+    } catch (error) {
+        console.error("Transfer cart error:", error);
+        return res.status(500).json({ error: "Failed to transfer guest cart" });
     }
 };
 
