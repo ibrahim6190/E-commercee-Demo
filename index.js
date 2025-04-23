@@ -38,6 +38,6 @@ app.use("/api/v1", cartRouter);
 
 //listen for incoming request
 const port= process.env.PORT || 3080;
-app.listen(3080, () => {
+app.listen( () => {
     console.log (`server is listening on port ${port}`);
 });
