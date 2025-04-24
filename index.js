@@ -34,7 +34,7 @@ app.use("/api/v1", userRouter);
 app.use("/api/v1", cartRouter);
 
 //listen for incoming request
-const port = process.env.PORT || 10000;
+const port = process.env.PORT || 5000;
 app.listen(() => {
   console.log(`server is listening on port ${port}`);
 });
